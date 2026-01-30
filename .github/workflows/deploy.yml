@@ -2,7 +2,7 @@ name: Deploy React to Pages
 
 on:
   push:
-    branches: ["main"] # Only runs when you push to the main branch
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: 18
       - run: npm install
+      - run: npm run build # <--- ADD THIS: Creates the 'dist' folder
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./dist" # <--- ADD THIS: Hands the files to the deployer
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
