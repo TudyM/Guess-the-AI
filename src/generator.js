@@ -6,147 +6,159 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { questions } from "./questions.js";
 
-// ==========================================
-// 1. CONFIGURATION & SETUP
-// ==========================================
+// --- CONFIGURATION ---
+const CONCURRENCY_LIMIT = 8;
 const DATA_FILE_PATH = path.resolve("src/data.json");
 
-// --- CLIENTS ---
-// 1. Google (Gemini)
+// --- CLIENTS (Auto-retries disabled to see raw errors) ---
 const googleAI = new GoogleGenAI({ apiKey: process.env.GOOGLEAI_API_KEY });
-
-// 2. OpenAI (ChatGPT)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// 3. Anthropic (Claude)
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// 4. DeepSeek (Uses OpenAI SDK with custom URL)
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  maxRetries: 0,
+});
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  maxRetries: 0,
+});
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: "https://api.deepseek.com",
+  maxRetries: 0,
 });
 
-// ==========================================
-// 2. PROVIDERS STRATEGY
-// ==========================================
+// --- PROVIDERS WRAPPER ---
 const providers = [
   {
     name: "Gemini",
+    color: "\x1b[34m", // Blue
     enabled: true,
     generate: async (prompt) => {
-      const response = await googleAI.models.generateContent({
-        model: "gemini-2.0-flash",
+      const res = await googleAI.models.generateContent({
+        model: "gemini-3-flash-preview", // Your model
         contents: prompt,
       });
-      return response.text;
+      return res.text;
     },
   },
   {
     name: "ChatGPT",
+    color: "\x1b[32m", // Green
     enabled: true,
     generate: async (prompt) => {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const res = await openai.chat.completions.create({
+        model: "gpt-5-mini", // Your model
         messages: [{ role: "user", content: prompt }],
       });
-      return response.choices[0].message.content;
+      return res.choices[0].message.content;
     },
   },
   {
     name: "Claude",
+    color: "\x1b[33m", // Yellow
     enabled: true,
     generate: async (prompt) => {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5-20250929", // Latest stable model
+      const res = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250929", // Your model
         max_tokens: 300,
         messages: [{ role: "user", content: prompt }],
       });
-      return response.content[0].text;
+      return res.content[0].text;
     },
   },
   {
-    name: "Deepseek", // <--- NEW PROVIDER
+    name: "Deepseek",
+    color: "\x1b[35m", // Magenta
     enabled: true,
     generate: async (prompt) => {
-      const response = await deepseek.chat.completions.create({
-        model: "deepseek-chat", // V3 (Use 'deepseek-reasoner' for R1/Logic)
+      const res = await deepseek.chat.completions.create({
+        model: "deepseek-chat", // Your model
         messages: [{ role: "user", content: prompt }],
       });
-      return response.choices[0].message.content;
+      return res.choices[0].message.content;
     },
   },
 ];
 
-// ==========================================
-// 3. HELPER FUNCTIONS
-// ==========================================
-function loadData() {
-  if (!fs.existsSync(DATA_FILE_PATH)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE_PATH, "utf-8"));
-  } catch (e) {
-    return [];
-  }
+// --- HELPER: Visual Logger ---
+const startTime = Date.now();
+function log(msg) {
+  const diff = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`[${diff}s] ${msg}`);
 }
 
-function saveData(data) {
-  fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(data, null, 2));
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// ==========================================
-// 4. MAIN LOOP
-// ==========================================
+// --- MAIN QUEUE ---
 async function main() {
-  let data = loadData();
+  // 1. Load Data
+  let data = [];
+  try {
+    data = JSON.parse(fs.readFileSync(DATA_FILE_PATH, "utf-8"));
+  } catch (e) {}
+
+  // 2. Build Job List
+  const jobs = [];
+  questions.forEach((q) => {
+    providers.forEach((p) => {
+      if (!p.enabled) return;
+      const exists = data.find(
+        (i) => i.prompt === q.prompt && i.model === p.name,
+      );
+      if (!exists) jobs.push({ q, p });
+    });
+  });
+
   console.log(
-    `Loaded ${questions.length} questions. Checking against ${data.length} existing responses.`,
+    `Queue size: ${jobs.length} items. Processing ${CONCURRENCY_LIMIT} at a time...`,
   );
 
-  for (const q of questions) {
-    console.log(`\n--- ID ${q.id}: "${q.prompt.substring(0, 30)}..." ---`);
+  // 3. Queue Logic
+  let active = 0;
+  let index = 0;
 
-    for (const provider of providers) {
-      if (!provider.enabled) continue;
-
-      // Check for duplicates
-      const exists = data.find(
-        (item) => item.prompt === q.prompt && item.model === provider.name,
-      );
-
-      if (exists) {
-        console.log(`   [${provider.name}] Already done.`);
-        continue;
+  return new Promise((resolve) => {
+    const next = () => {
+      if (index >= jobs.length && active === 0) {
+        resolve();
+        return;
       }
 
-      try {
-        console.log(`   [${provider.name}] Generating...`);
-        await sleep(1000); // 1s delay to be safe
+      while (active < CONCURRENCY_LIMIT && index < jobs.length) {
+        const job = jobs[index++];
+        run(job);
+      }
+    };
 
-        const answer = await provider.generate(
-          q.prompt + "Be short. Write at most 70 words.",
-        );
-        if (!answer) throw new Error("Empty response");
+    const run = async ({ q, p }) => {
+      active++;
+      const idStr = `ID:${q.id} [${p.name}]`;
+
+      log(`${p.color}➤ START ${idStr}\x1b[0m`);
+
+      try {
+        const answer = await p.generate(q.prompt + " Write 150-300 words.");
 
         data.push({
           id: Date.now(),
           category: q.category,
           prompt: q.prompt,
           response: answer.trim(),
-          model: provider.name,
-          options: ["Gemini", "ChatGPT", "Claude", "Grok", "Deepseek"],
+          model: p.name,
+          options: ["Gemini", "ChatGPT", "Claude", "Deepseek"],
         });
 
-        saveData(data);
-        console.log(`   -> Saved!`);
-      } catch (error) {
-        console.error(`   -> X ERROR [${provider.name}]:`, error.message);
+        // Quick save every time (since FS is fast)
+        fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(data, null, 2));
+
+        log(`${p.color}✓ DONE  ${idStr}\x1b[0m`);
+      } catch (err) {
+        log(`\x1b[31m✖ FAIL  ${idStr} -> ${err.message}\x1b[0m`);
+      } finally {
+        active--;
+        next();
       }
-    }
-  }
-  console.log("\nDone! All providers processed.");
+    };
+
+    next();
+  });
 }
 
 main();
