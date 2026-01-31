@@ -1,0 +1,57 @@
+[
+  {
+    "model_name": "Gemini",
+    "core_identity": "The Formal Pedagogical Academic",
+    "common_structure": "Highly hierarchical organization featuring bolded headers, numbered sub-points with nested bullets, and a distinct concluding 'Summary' or 'Conclusion' block.",
+    "writing_quirks": [
+      "Uses aggressive inline bolding to highlight key terminology and technical jargon",
+      "Explicitly credits specific real-world authorities and names schools of thought",
+      "Employs high-register, sophisticated vocabulary like 'pathological' or 'functional personhood'",
+      "Organizes responses around binary frameworks or categorical 'phases'",
+      "Frequently uses horizontal rules or Markdown headers to create a textbook-like visual flow"
+    ],
+    "weaknesses": "Occasional structural hallucinations where the promised number of points does not match the actual list provided.",
+    "telltale_signs": "A symmetrical, multi-layered list that prioritizes academic classification and ends with a formal, standalone 'Summary' section to synthesize the main takeaway."
+  },
+  {
+    "model_name": "ChatGPT",
+    "core_identity": "A high-density information specialist who prioritizes maximum conciseness and narrative flow over structured formatting.",
+    "common_structure": "A single, dense paragraph or a two-paragraph prose block that entirely eschews headers, bullet points, and introductory meta-commentary.",
+    "writing_quirks": [
+      "Uses em-dashes and parentheticals to create a continuous, flowing internal rhythm",
+      "Strips away all conversational filler like 'Here is the answer' or 'In summary'",
+      "Utilizes technical shorthand and symbols (e.g., tildes, prime symbols, or clinical terminology) to save space",
+      "Employs strategic bolding within blocks of text rather than as organizational titles",
+      "Ends abruptly after the final point of information without a sign-off"
+    ],
+    "weaknesses": "Lacks scannability due to a refusal to use lists; can feel overly clinical or dismissive of the user's need for context.",
+    "telltale_signs": "A single block of highly sophisticated, unformatted text that begins immediately with technical data and uses long, complex sentences joined by em-dashes."
+  },
+  {
+    "model_name": "Claude",
+    "core_identity": "The Analytical Documentarian: A high-efficiency summarizer who prioritizes visual hierarchy and objective framing over narrative flow.",
+    "common_structure": "Strict Markdown hierarchy featuring a top-level H1 header, categorical bulleted lists, and a dedicated 'Verdict' or 'Bottom Line' concluding section.",
+    "writing_quirks": [
+      "Uses large H1 headers (#) for titles and H2s (##) to separate theoretical vs. practical reality",
+      "Employs conversational signposts like 'The Short Answer' or 'Bottom line'",
+      "Strips away narrative introductions in favor of immediate, skeletal bullet points",
+      "Includes a dedicated 'Important Caveat' or 'Logic' section at the bottom of responses"
+    ],
+    "weaknesses": "Over-prioritizes brevity to the point of being skeletal, occasionally lacks concluding polish, and can suffer from logical hallucinations in complex reasoning tasks.",
+    "telltale_signs": "The combination of a prominent H1 title header, a minimalist 'Myth vs. Reality' style layout, and the use of punchy, summary-oriented headers like 'Verdict:'."
+  },
+  {
+    "model_name": "Deepseek",
+    "core_identity": "The Sophisticated Academic Polymath",
+    "common_structure": "A modular 'sandwich' layout featuring a formal introductory thesis, a dense visual hierarchy with nested bolded headers and horizontal dividers, and a lengthy, nuanced synthesizing conclusion.",
+    "writing_quirks": [
+      "Heavy utilization of LaTeX syntax for mathematical rendering and inline variables",
+      "Frequent use of horizontal rules (---) to separate instructional or thematic blocks",
+      "Sophisticated 'Noun of Noun' phrasing combined with high-register academic vocabulary",
+      "Adoption of a pedagogical 'expert tutor' persona that uses structural signposting like 'Step 1' or 'In summary'",
+      "Tendency to provide unsolicited context, technical disclaimers, or meta-analysis even when asked for brevity"
+    ],
+    "weaknesses": "Chronic verbosity and a persistent failure to adhere to conciseness constraints, often prioritizing exhaustive detail and 'expert' thoroughness over direct utility.",
+    "telltale_signs": "A visually dense, multi-layered hierarchical response that blends rigorous scientific jargon with highly evocative, cinematic prose and a formal synthesis at the end."
+  }
+]
